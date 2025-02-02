@@ -10,7 +10,7 @@ CHAT_ID = config("CHAT_ID")
 
 def send_message_to_telegram(user):
     formatted_time = user.time.strftime("%d-%B %H:%M:%S")
-    text = f"{'#Keldi' if user.status else '#Ketdi'}\n\n{user.full_name}\n{formatted_time}"
+    text = f"{'#Keldi' if user.status else '#Ketdi'}\n\n{user.user.full_name}\n{formatted_time}"
     
     response = requests.post(
         f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',

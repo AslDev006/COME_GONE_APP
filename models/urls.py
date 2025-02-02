@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import user_detail, pressed
+from .views import UserModelCreateAPIView, ComeGoneTimeModelCreateAPIView
 
 urlpatterns = [
-    path('user/', user_detail, name='user_detail'),  
-    path('pressed/', pressed, name='pressed'),        
+    path('user/', UserModelCreateAPIView.as_view(), name='user-create'),
+    path('procces/', ComeGoneTimeModelCreateAPIView.as_view(), name='come-gone-time-create'),
 ]

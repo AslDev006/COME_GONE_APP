@@ -105,21 +105,3 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-    }
-}
-
-
-
-CELERY_BEAT_SCHEDULE = {
-    'update-user-status-every-day': {
-        'task': 'models.tasks.update_user_status',
-        'schedule': crontab(hour=config('hour'), minute=config('minute')),  
-    },
-}
-
-
-CELERY_BROKER_URL = config('CELERY_BROKER_URL')

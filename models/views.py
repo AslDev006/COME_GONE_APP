@@ -1,42 +1,30 @@
-import requests
-from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import UserModel
-from django.utils import timezone
-from django.core.cache import cache
+from rest_framework import status
+from .models import UserModel, ComeGoneTimeModel
+from .serializers import UserModelSerializer, ComeGoneTimeModelSerializer
+from datetime import datetime
 from .bot import send_message_to_telegram
-@api_view(['GET', 'POST'])
-def user_detail(request):
-    if request.method == 'GET':
-        users = UserModel.objects.all()
-        data = [{"user": user.user, "status": user.status, "time": user.time} for user in users]
-        return Response(data)
 
-    elif request.method == 'POST':
-        user_id = request.data.get('user')
-        user_instance, created = UserModel.objects.get_or_create(user=user_id)
-        return Response({"user": user_instance.user, "status": user_instance.status}, status=status.HTTP_201_CREATED)
+class UserModelCreateAPIView(APIView):
+    def post(self, request):
+        serializer = UserModelSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(UserModelSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-def pressed(request):
-    user_id = request.data.get('user')
-    user_instance = UserModel.objects.filter(user=user_id).first()
-
-    if not user_instance:
-        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    cache_key = f'pressed_{user_id}'
-    
-    if cache.get(cache_key) and (timezone.now() - cache.get(cache_key)).total_seconds() < 60:
-        return Response({"error": "Bir daqiqa ichida yana so'rov yuborish mumkin emas."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-
-    user_instance.status = not user_instance.status
-    user_instance.time = timezone.now()
-    user_instance.save()
-
-    send_message_to_telegram(user_instance)
-
-    cache.set(cache_key, timezone.now(), timeout=60)
-    
-    return Response({"message": "User updated successfully.", "status": user_instance.status}, status=status.HTTP_200_OK)
+class ComeGoneTimeModelCreateAPIView(APIView):
+    def post(self, request):
+        request.data['time'] = datetime.now()
+        serializer = ComeGoneTimeModelSerializer(data=request.data)
+        if serializer.is_valid():
+            come_gone_time = serializer.save()
+            user = come_gone_time.user
+            come_gone_time.status = user.status
+            user.status = not user.status
+            come_gone_time.save()
+            user.save()  
+            send_message_to_telegram(come_gone_time)
+            return Response(ComeGoneTimeModelSerializer(come_gone_time).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
