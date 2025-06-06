@@ -1,49 +1,55 @@
-from django.conf import settings
-import os
 import requests
-from .models import ComeGoneTimeModel
-from rest_framework import status
-from .models import UserModel
-from django.utils import timezone
-from django.core.cache import cache
 from decouple import config
-import pandas as pd
-from decouple import config
+from django.conf import settings
+
+BOT_TOKEN = config("BOT_TOKEN", default=None)
+CHAT_ID = config("CHAT_ID", default=None)
 
 
-BOT_TOKEN = config("BOT_TOKEN")
-CHAT_ID = config("CHAT_ID")
+def send_message_to_telegram(come_gone_instance):
+    if not BOT_TOKEN or not CHAT_ID:
+        print("Telegram sozlamalari (BOT_TOKEN yoki CHAT_ID) topilmadi.")
+        if getattr(settings, 'DEBUG', False):  # DEBUG ni xavfsiz olish
+            pass
+        return
 
+    try:
+        user_model = come_gone_instance.user
+        full_name = user_model.full_name if user_model.full_name else f"ID: {user_model.user}"
+        event_time = come_gone_instance.time.strftime("%d-%m-%Y %H:%M:%S")
+        event_status_text = "#Keldi ✅" if come_gone_instance.status else "#Ketdi 🚪"
+        user_status_text = 'Ish joyida' if user_model.status else 'Ish joyida emas'
 
-def create_excel_report(user_id):
-    data = ComeGoneTimeModel.objects.filter(user_id=user_id).values()
-    df = pd.DataFrame(data)
-
-    # Excel faylni saqlash
-    file_path = os.path.join(settings.MEDIA_ROOT, f'{user_id}_come_gone_time_report.xlsx')
-    df.to_excel(file_path, index=False)
-    
-    return file_path
-
-
-def send_message_to_telegram(user):
-    formatted_time = user.time.strftime("%d-%B %H:%M:%S")
-    text = f"{'#Keldi' if user.status else '#Ketdi'}\n\n{user.user.full_name}\n{formatted_time}"
-    
-    response = requests.post(
-        f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
-        data={'chat_id': CHAT_ID, 'text': text}
-    )
-    print("Xabar muvaffaqiyatli yuborildi." if response.status_code == 200 else f"Xato: {response.status_code} - {response.text}")
-
-
-
-
-def send_excel_to_telegram(file_path):
-    with open(file_path, 'rb') as file:
-        response = requests.post(
-            f'https://api.telegram.org/bot{BOT_TOKEN}/sendDocument',
-            data={'chat_id': CHAT_ID},
-            files={'document': file}
+        text = (
+            f"{event_status_text}\n"
+            f"👤 **F.I.O:** {full_name}\n"
+            f"🕒 **Vaqt:** {event_time}\n"
+            f"🏢 **Holati:** {user_status_text}"
         )
-    print("Excel fayli muvaffaqiyatli yuborildi." if response.status_code == 200 else f"Xato: {response.status_code} - {response.text}")
+
+        payload = {
+            'chat_id': CHAT_ID,
+            'text': text,
+            'parse_mode': 'Markdown'
+        }
+
+        api_url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
+        response = requests.post(api_url, data=payload, timeout=10)
+        response.raise_for_status()
+
+        response_json = response.json()
+        if response_json.get('ok'):
+            print(
+                f"Telegramga xabar muvaffaqiyatli yuborildi. Message ID: {response_json.get('result', {}).get('message_id')}")
+        else:
+            print(f"Telegramga xabar yuborildi, lekin 'ok' statusi false: {response_json}")
+
+    except requests.exceptions.Timeout:
+        print(f"Telegram API ga so'rov yuborishda timeout (10s).")
+    except requests.exceptions.HTTPError as http_err:
+        print(f"Telegram API dan HTTP xatolik: {http_err} - Javob: {http_err.response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"Telegram API ga ulanishda xatolik: {e}")
+    except Exception as e:
+        print(
+            f"Telegramga xabar yuborishda kutilmagan xatolik: {e}, Javob matni (agar mavjud bo'lsa): {getattr(e, 'response', 'N/A')}")

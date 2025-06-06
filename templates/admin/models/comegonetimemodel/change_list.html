@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block object-tools-items %}
+  {{ block.super }}
+  <li>
+    <a href="{% url 'admin:models_comegonetimemodel_export_all_excel' %}" class="button">
+      {% translate "Barcha yozuvlarni Excelga yuklash" %}
+    </a>
+  </li>
+{% endblock %}

@@ -1,13 +1,12 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import UserModel, ComeGoneTimeModel
 from .serializers import UserModelSerializer, ComeGoneTimeModelSerializer
-from datetime import datetime
 from .bot import send_message_to_telegram
+from .throttling import UserFieldRateThrottle # Yoki config.throttles dan
 
 class UserModelCreateAPIView(APIView):
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = UserModelSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
@@ -15,16 +14,20 @@ class UserModelCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ComeGoneTimeModelCreateAPIView(APIView):
-    def post(self, request):
-        request.data['time'] = datetime.now()
+    throttle_classes = [UserFieldRateThrottle]
+
+    def post(self, request, *args, **kwargs):
         serializer = ComeGoneTimeModelSerializer(data=request.data)
         if serializer.is_valid():
-            come_gone_time = serializer.save()
-            user = come_gone_time.user
-            come_gone_time.status = user.status
-            user.status = not user.status
-            come_gone_time.save()
-            user.save()  
-            send_message_to_telegram(come_gone_time)
-            return Response(ComeGoneTimeModelSerializer(come_gone_time).data, status=status.HTTP_201_CREATED)
+            try:
+                come_gone_instance = serializer.save()
+                send_message_to_telegram(come_gone_instance)
+                response_serializer = ComeGoneTimeModelSerializer(come_gone_instance)
+                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print(f"API XATOLIK: ComeGoneTimeModelCreateAPIView.post - {str(e)}")
+                return Response(
+                    {"error": "Serverda kutilmagan ichki xatolik yuz berdi.", "details": str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
