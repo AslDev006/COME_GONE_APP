@@ -101,7 +101,7 @@ JAZZMIN_SETTINGS = {
     "site_brand": config("JAZZMIN_SITE_BRAND", default="Loyiha Nomi"),
     "welcome_sign": config("JAZZMIN_WELCOME_SIGN", default="Xush kelibsiz!"),
     "copyright": config("JAZZMIN_COPYRIGHT", default=f"Loyiha Nomi © {datetime.date.today().year}"),
-    "search_model": ["auth.User", "models.UserModel"],
+    "search_model": ["auth.User", "core.UserModel"],
     "topmenu_links": [
         {"name": "Bosh Sahifa", "url": "admin:index", "permissions": ["auth.view_user"]},
         {"model": "auth.User"},
