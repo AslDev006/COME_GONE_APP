@@ -22,9 +22,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
-    'models.apps.ModelsConfig',
     'rest_framework',
+    'decouple',
     'rest_framework.authtoken',
+    'core.apps.CoreConfig',
 ]
 
 MIDDLEWARE = [
@@ -104,9 +105,9 @@ JAZZMIN_SETTINGS = {
     "topmenu_links": [
         {"name": "Bosh Sahifa", "url": "admin:index", "permissions": ["auth.view_user"]},
         {"model": "auth.User"},
-        {"app": "models"},
+        {"app": "core"},
     ],
-    "order_with_respect_to": ["auth", "models"],
+    "order_with_respect_to": ["auth", "core"],
     "show_sidebar": True,
     "navigation_expanded": True,
     "language_chooser": True,
@@ -115,8 +116,8 @@ JAZZMIN_SETTINGS = {
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
         "admin.LogEntry": "fas fa-file-alt",
-        "models.usermodel": "fas fa-id-card",
-        "models.comegonetimemodel": "fas fa-stopwatch",
+        "core.usermodel": "fas fa-id-card",
+        "core.comegonetimemodel": "fas fa-stopwatch",
     },
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
@@ -160,7 +161,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
-        'models.throttling.UserFieldRateThrottle',
+        'core.throttling.UserFieldRateThrottle',
     ),
     'DEFAULT_THROTTLE_RATES': {
         'anon': config("THROTTLE_RATE_ANON", default='100/day'),

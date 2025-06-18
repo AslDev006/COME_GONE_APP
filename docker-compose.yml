@@ -1,8 +1,9 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   web:
     build: .
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
@@ -11,3 +12,11 @@ services:
       - .env
     environment:
       - DEBUG=1
+
+  bot:
+    build: .
+    command: python manage.py startbot
+    volumes:
+      - .:/app
+    env_file:
+      - .env
