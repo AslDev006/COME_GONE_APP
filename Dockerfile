@@ -13,9 +13,15 @@ RUN addgroup --system app && adduser --system --group app
 COPY . .
 RUN chown -R app:app /app
 
+COPY ./entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+
 USER app
 
 EXPOSE 8000
 
+ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
