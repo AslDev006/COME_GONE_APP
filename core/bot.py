@@ -1,87 +1,65 @@
 import requests
 from decouple import config
-from django.conf import settings
+from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 BOT_TOKEN = config("BOT_TOKEN", default=None)
 CHAT_ID = config("CHAT_ID", default=None)
 
 
-def send_message_to_telegram(come_gone_instance):
+def _send_telegram_message(text: str):
     if not BOT_TOKEN or not CHAT_ID:
-        print("Telegram sozlamalari (BOT_TOKEN yoki CHAT_ID) topilmadi.")
-        if getattr(settings, 'DEBUG', False):  # DEBUG ni xavfsiz olish
-            pass
+        logger.error("Telegram sozlamalari (BOT_TOKEN yoki CHAT_ID) .env faylida topilmadi.")
         return
 
+    payload = {
+        'chat_id': CHAT_ID,
+        'text': text,
+        'parse_mode': 'Markdown'
+    }
+    api_url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
+
     try:
-        user_model = come_gone_instance.user
-        full_name = user_model.full_name if user_model.full_name else f"ID: {user_model.user}"
-        event_time = come_gone_instance.time.strftime("%d-%m-%Y %H:%M:%S")
-        event_status_text = "#Keldi ✅" if come_gone_instance.status else "#Ketdi 🚪"
-        user_status_text = 'Ish joyida' if user_model.status else 'Ish joyida emas'
-
-        text = (
-            f"{event_status_text}\n"
-            f"👤 **F.I.O:** {full_name}\n"
-            f"🕒 **Vaqt:** {event_time}\n"
-            f"🏢 **Holati:** {user_status_text}"
-        )
-
-        payload = {
-            'chat_id': CHAT_ID,
-            'text': text,
-            'parse_mode': 'Markdown'
-        }
-
-        api_url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
         response = requests.post(api_url, data=payload, timeout=10)
         response.raise_for_status()
-
-        response_json = response.json()
-        if response_json.get('ok'):
-            print(
-                f"Telegramga xabar muvaffaqiyatli yuborildi. Message ID: {response_json.get('result', {}).get('message_id')}")
-        else:
-            print(f"Telegramga xabar yuborildi, lekin 'ok' statusi false: {response_json}")
-
-    except requests.exceptions.Timeout:
-        print(f"Telegram API ga so'rov yuborishda timeout (10s).")
+        logger.info("Telegramga xabar muvaffaqiyatli yuborildi.")
     except requests.exceptions.HTTPError as http_err:
-        print(f"Telegram API dan HTTP xatolik: {http_err} - Javob: {http_err.response.text}")
-    except requests.exceptions.RequestException as e:
-        print(f"Telegram API ga ulanishda xatolik: {e}")
+        logger.error(f"Telegram API dan HTTP xatolik: {http_err} - Javob: {http_err.response.text}", exc_info=True)
     except Exception as e:
-        print(
-            f"Telegramga xabar yuborishda kutilmagan xatolik: {e}, Javob matni (agar mavjud bo'lsa): {getattr(e, 'response', 'N/A')}")
+        logger.error(f"Telegramga xabar yuborishda kutilmagan xatolik: {e}", exc_info=True)
+
+
+def send_message_to_telegram(come_gone_instance):
+    user_model = come_gone_instance.user
+    full_name = user_model.full_name or f"ID: {user_model.user}"
+    local_time = timezone.localtime(come_gone_instance.time)
+    event_time = local_time.strftime("%d-%m-%Y %H:%M:%S")
+    event_status_text = "#Keldi ✅" if come_gone_instance.status else "#Ketdi 🚪"
+    user_status_text = 'Ish joyida' if user_model.status else 'Ish joyida emas'
+
+    text = (
+        f"{event_status_text}\n"
+        f"👤 **F.I.O:** {full_name}\n"
+        f"🕒 **Vaqt:** {event_time}\n"
+        f"🏢 **Holati:** {user_status_text}"
+    )
+    _send_telegram_message(text)
 
 
 def send_auto_checkout_message(come_gone_instance):
-    if not BOT_TOKEN or not CHAT_ID:
-        print("Telegram sozlamalari (BOT_TOKEN yoki CHAT_ID) topilmadi.")
-        return
+    user_model = come_gone_instance.user
+    full_name = user_model.full_name or f"ID: {user_model.user}"
+    local_time = timezone.localtime(come_gone_instance.time)
+    event_time = local_time.strftime("%d-%m-%Y %H:%M:%S")
 
-    try:
-        user_model = come_gone_instance.user
-        full_name = user_model.full_name if user_model.full_name else f"ID: {user_model.user}"
-        event_time = come_gone_instance.time.strftime("%d-%m-%Y %H:%M:%S")
-
-        text = (
-            f"#AvtomatikChiqish ⚙️\n\n"
-            f"Diqqat! Xodim tizimdan chiqishni unutganligi sababli, kun yakunida avtomatik ravishda tizimdan chiqarildi.\n\n"
-            f"👤 **F.I.O:** {full_name}\n"
-            f"🕒 **Chiqish vaqti:** {event_time}\n"
-            f"🏢 **Holati:** Ish joyida emas"
-        )
-
-        payload = {
-            'chat_id': CHAT_ID,
-            'text': text,
-            'parse_mode': 'Markdown'
-        }
-        api_url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-        response = requests.post(api_url, data=payload, timeout=10)
-        response.raise_for_status()
-        print(f"Telegramga avtomatik chiqish xabari muvaffaqiyatli yuborildi: {user_model.full_name}")
-
-    except Exception as e:
-        print(f"Avtomatik chiqish xabarini yuborishda xatolik: {e}")
+    text = (
+        f"#AvtomatikChiqish ⚙️\n\n"
+        "Diqqat! Xodim tizimdan chiqishni unutganligi sababli, kun yakunida "
+        "avtomatik ravishda tizimdan chiqarildi.\n\n"
+        f"👤 **F.I.O:** {full_name}\n"
+        f"🕒 **Chiqish vaqti:** {event_time}\n"
+        f"🏢 **Holati:** Ish joyida emas"
+    )
+    _send_telegram_message(text)
