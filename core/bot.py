@@ -53,3 +53,35 @@ def send_message_to_telegram(come_gone_instance):
     except Exception as e:
         print(
             f"Telegramga xabar yuborishda kutilmagan xatolik: {e}, Javob matni (agar mavjud bo'lsa): {getattr(e, 'response', 'N/A')}")
+
+
+def send_auto_checkout_message(come_gone_instance):
+    if not BOT_TOKEN or not CHAT_ID:
+        print("Telegram sozlamalari (BOT_TOKEN yoki CHAT_ID) topilmadi.")
+        return
+
+    try:
+        user_model = come_gone_instance.user
+        full_name = user_model.full_name if user_model.full_name else f"ID: {user_model.user}"
+        event_time = come_gone_instance.time.strftime("%d-%m-%Y %H:%M:%S")
+
+        text = (
+            f"#AvtomatikChiqish ⚙️\n\n"
+            f"Diqqat! Xodim tizimdan chiqishni unutganligi sababli, kun yakunida avtomatik ravishda tizimdan chiqarildi.\n\n"
+            f"👤 **F.I.O:** {full_name}\n"
+            f"🕒 **Chiqish vaqti:** {event_time}\n"
+            f"🏢 **Holati:** Ish joyida emas"
+        )
+
+        payload = {
+            'chat_id': CHAT_ID,
+            'text': text,
+            'parse_mode': 'Markdown'
+        }
+        api_url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
+        response = requests.post(api_url, data=payload, timeout=10)
+        response.raise_for_status()
+        print(f"Telegramga avtomatik chiqish xabari muvaffaqiyatli yuborildi: {user_model.full_name}")
+
+    except Exception as e:
+        print(f"Avtomatik chiqish xabarini yuborishda xatolik: {e}")

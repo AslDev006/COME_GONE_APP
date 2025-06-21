@@ -2,9 +2,9 @@ __pycache__
 .vscode/
 .env
 .idea/
-db.sqlite3
 __pycache__/
 *.pyc
 .venv/
 /staticfiles/
 /media/
+db.sqlite3

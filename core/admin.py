@@ -25,7 +25,6 @@ class ComeGoneTimeAdmin(admin.ModelAdmin):
                     'get_event_status_display')
     list_filter = ('status', 'user', ('time', admin.DateFieldListFilter))
     search_fields = ('user__user', 'user__full_name')
-    ordering = ['-time']
 
     change_list_template = "admin/models/comegonetimemodel/change_list.html"
 

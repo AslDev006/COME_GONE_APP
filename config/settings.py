@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from decouple import config
+from celery.schedules import crontab
 import datetime
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,6 +25,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'rest_framework',
     'decouple',
+    "django_celery_beat",
     'rest_framework.authtoken',
     'core.apps.CoreConfig',
 ]
@@ -59,10 +61,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# DATABASES sozlamasini almashtiring
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": BASE_DIR / "database" / "db.sqlite3",
     }
 }
 
@@ -208,5 +212,20 @@ LOGGING = {
             'level': 'WARNING',
             'propagate': False,
         },
+    },
+}
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELery_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    'auto-checkout-every-day-at-23-55': {
+        'task': 'core.tasks.run_auto_checkout_celery',
+        # 'schedule': 30.0,
+        'schedule': crontab(minute='55', hour='23'),
     },
 }
