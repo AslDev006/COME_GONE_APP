@@ -225,9 +225,12 @@ CELery_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 CELERY_BEAT_SCHEDULE = {
+    'get-out-for-lunch-at-12': {
+        'task': 'core.tasks.get_out_lunch_celery',
+        'schedule': crontab(hour=12, minute=0),
+    },
     'auto-checkout-every-day-at-23-55': {
         'task': 'core.tasks.run_auto_checkout_celery',
-        # 'schedule': 30.0,
         'schedule': crontab(minute='55', hour='23'),
     },
 }
